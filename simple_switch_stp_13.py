@@ -8,23 +8,22 @@ from ryu.lib import stplib
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 from ryu.app import simple_switch_13
-from ryu.app.simple_switch_13 import SimpleSwitch13
 
-class SimpleSwitchSTP13(SimpleSwitch13):
+class SimpleSwitch13(simple_switch_13.SimpleSwitch13):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     _CONTEXTS = {"stplib": stplib.Stp}
 
     def __init__(self, *args, **kwargs):
         # Inherit from simple_switch_13 because the latter serves
         # as the basis for ignoring seen-before packets 
-        super(SimpleSwitchSTP13, self).__init__(*args, **kwargs)
+        super(SimpleSwitch13, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
         self.stp = kwargs["stplib"]
         # Set the data path ID to all bridges on the switch
         config = {
-            dpid_lib.str_to_dpid("1"): {"bridge": {"priority": 0x8000}},
-            dpid_lib.str_to_dpid("2"): {"bridge": {"priority": 0x9000}},
-            dpid_lib.str_to_dpid("3"): {"bridge": {"priority": 0xa000}}
+            dpid_lib.str_to_dpid("0000000000000001"): {"bridge": {"priority": 0x8000}},
+            dpid_lib.str_to_dpid("0000000000000002"): {"bridge": {"priority": 0x9000}},
+            dpid_lib.str_to_dpid("0000000000000003"): {"bridge": {"priority": 0xa000}}
         }
         self.stp.set_config(config)
 
@@ -59,6 +58,8 @@ class SimpleSwitchSTP13(SimpleSwitch13):
         # Pull the destination from the MAC table
         # Else, send the packet on all ports 
         out_port = self.mac_to_port[dpid][dst] if dst in self.mac_to_port[dpid] else ofproto.OFPP_FLOOD
+        # Set the port(s) to send the packet out of
+        actions = [parser.OFPActionOutput(out_port)]
         # In the event that the destination is pulled from the MAC table,
         # update the switch's flow table
         if out_port != ofproto.OFPP_FLOOD:
@@ -66,8 +67,6 @@ class SimpleSwitchSTP13(SimpleSwitch13):
             # Use add_flow() from the parent class to 
             # add this type of packet to the flow table
             self.add_flow(datapath, 1, match, actions)
-        # Set the port(s) to send the packet out of
-        actions = [parser.OFPActionOutput(out_port)]
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
