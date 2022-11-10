@@ -58,15 +58,15 @@ class SimpleSwitch13(simple_switch_13.SimpleSwitch13):
         # Pull the destination from the MAC table
         # Else, send the packet on all ports 
         out_port = self.mac_to_port[dpid][dst] if dst in self.mac_to_port[dpid] else ofproto.OFPP_FLOOD
+        # In the event that the destination is pulled from the MAC
         # Set the port(s) to send the packet out of
         actions = [parser.OFPActionOutput(out_port)]
-        # In the event that the destination is pulled from the MAC table,
-        # update the switch's flow table
-        if out_port != ofproto.OFPP_FLOOD:
-            match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
-            # Use add_flow() from the parent class to 
-            # add this type of packet to the flow table
-            self.add_flow(datapath, 1, match, actions)
+	# update the switch's flow table
+	if out_port != ofproto.OFPP_FLOOD:
+	    match = parser.OFPMatch(in_port=in_port, eth_dst=dst)
+	    # Use add_flow() from the parent class to
+	    # add this type of packet to the flow table
+	    self.add_flow(datapath, 1, match, actions)	
 
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
